@@ -118,9 +118,9 @@ class Task(object):
     + priority (A)
     + projects +prj +prj1
     + contexts @ctx @ctx1
-    - scheduling #2013-09-25
-    - state &done(2013-09-10 22:10)
-    - creation date
+    + scheduling #2013-09-25
+    + state &done(2013-09-10 22:10)
+    + creation date
     + task msg
     - metadata key:value pairs in the task msg
     - mentioned people <miph>
