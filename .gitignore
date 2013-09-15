@@ -1,35 +1,65 @@
+# python
 *.py[cod]
-
+ 
 # C extensions
 *.so
-
-# Packages
-*.egg
-*.egg-info
-dist
+ 
+# tmps
+*~
+tmp/**/*
+*.lock
+*.DS_Store
+*.swp
+*.out
+ 
+# build
+.installed.cfg
+downloads
 build
-eggs
+dist
 parts
-bin
 var
 sdist
-develop-eggs
-.installed.cfg
 lib
 lib64
-
-# Installer logs
-pip-log.txt
-
+MANIFEST
+ 
 # Unit test / coverage reports
 .coverage
 .tox
 nosetests.xml
-
-# Translations
-*.mo
-
+pep8.out
+pylint.out
+ 
+# egg related
+develop-eggs
+*.egg-info
+*.egg
+*.EGG
+*.EGG-INFO
+src/*.egg-info
+eggs
+fake-eggs
+.installed.cfg
+ 
+# django
+local_settings.py
+ 
+# source version control
+.hg
+.bzr
+.svn
+ 
+# Installer logs
+pip-log.txt
+ 
+# IDE
+.idea
+ 
 # Mr Developer
 .mr.developer.cfg
 .project
 .pydevproject
+ 
+# provision
+.vagrant
