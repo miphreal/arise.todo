@@ -50,6 +50,9 @@ class MultipleTaskItem(TaskItem):
     def _parse(self, src_text):
         return self.pattern.findall(src_text)
 
+    def _format(self, projects):
+        return ' '.join('{!s}'.format(prj) for prj in projects)
+
     def clean(self, src_text):
         for prj in self.format().split():
             src_text = src_text.replace(prj, '')
@@ -112,6 +115,13 @@ class StateItem(TaskItem):
         return '&{}'.format(item)
 
 
+class MetadataItem(MultipleTaskItem):
+    pattern = re.compile(r'''([\w-]+:([\w-]+|"[^"]+"|'[^']+'))''')
+
+    def _parse(self, src_text):
+        return [match[0] for match in self.pattern.findall(src_text)]
+
+
 class Task(object):
     """
     Handling data
@@ -134,11 +144,13 @@ class Task(object):
         ContextsItem,
         FadingDateItem,
         SchedulingItem,
+        MetadataItem,
     ]
 
     STATES = ('todo', 'in-progress', 'done', 'removed')
 
     def __init__(self, todo_text):
+        self.src_text = todo_text
         self.clean_text = ''
         self.task_parts = []
         for part in self.TASK_PARTS:
@@ -179,3 +191,5 @@ if __name__ == '__main__':
     print Task('(A) task #2013-11-10 22:33 task')
     print Task('(A) task #~2013-11-10 22:33 task')
     print Task('(A) task #2013-11-10 22:33 #~2013-11-10 23:33 task')
+    print Task('(A) task key:value key1:"value value"')
+    print Task('(A) task key:value key1:"value value" task-continue asdf..')
