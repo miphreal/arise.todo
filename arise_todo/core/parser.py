@@ -1,6 +1,7 @@
 from inspect import isclass
 import operator
 import re
+import uuid
 
 
 DATE_YYYY = r'(\d{4})'
@@ -164,11 +165,18 @@ class Task(object):
     Task Parser
     """
 
-    def __init__(self, todo_text, task_parts=TASK_PARTS):
+    def __init__(self, todo_text, task_id=None, task_parts=TASK_PARTS):
         self.src_text = todo_text
         self.clean_text = ''
         self.task_parts, self.cleaned_text = self.parse_task_parts(todo_text, task_parts)
         self.clean_text = re.sub(r'\s{2,}', ' ', self.cleaned_text).strip()
+        self.id = task_id
+        if task_id is None:
+            self.id = self._task_id()
+
+    def _task_id(self):
+        from hashlib import sha1
+        return uuid.uuid5(namespace=uuid.NAMESPACE_OID, name=sha1(unicode(self)).digest())
 
     def parse_task_parts(self, todo_text, task_parts):
         parts = []
@@ -183,7 +191,9 @@ class Task(object):
 
     @property
     def data(self):
-        return {p.name: p.data for p in self.task_parts}
+        d = {p.name: p.data for p in self.task_parts}
+        d['id'] = self.id
+        return d
 
     def __str__(self):
-        return ' '.join(filter(operator.truth, map(operator.methodcaller('format'), self.task_parts)))
+        return u' '.join(filter(operator.truth, map(operator.methodcaller('format'), self.task_parts)))
