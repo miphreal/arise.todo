@@ -1,7 +1,7 @@
+from collections import OrderedDict
 from inspect import isclass
 import operator
 import re
-from funcy import any_fn
 
 FILE = 'todo.txt'
 
@@ -46,7 +46,7 @@ class TaskItem(object):
 
     @property
     def name(self):
-        return re.sub(r'([A-Z])', '_\1', self.__class__.__name__.replace('Item', ''))
+        return re.sub(r'([A-Z])', '\\1', self.__class__.__name__.replace('Item', ''))
 
     __str__ = __unicode__ = format
 
@@ -113,6 +113,22 @@ class ContextsItem(MultipleTaskItem):
         return ' '.join('@{}'.format(prj) for prj in projects)
 
 
+def text_item(text):
+    class TextNodeItem(TaskItem):
+        _text_node = text
+        pattern = re.compile(r'({})'.format(re.escape(_text_node)))
+
+        def _parse(self, src_text):
+            return self._text_node
+
+        def format(self):
+            return self._text_node
+
+    return TextNodeItem
+
+TextItem = text_item
+
+
 class StateItem(TaskItem):
     pattern = re.compile(r'&([\w-]+(\({datetime}\))?)'.format(datetime=DATE_TIME_RE))
     STATES = ('todo', 'in-progress', 'done', 'removed', 'skipped')
@@ -160,18 +176,19 @@ class Task(object):
     def __init__(self, todo_text):
         self.src_text = todo_text
         self.clean_text = ''
-        self.task_parts = []
-        for part in self.TASK_PARTS:
-            if isclass(part) and issubclass(part, TaskItem) or callable(part):
-                self.task_parts.append(part(todo_text, self))
-            else:
-                self.task_parts.append(part)
+        self.task_parts, self.cleaned_text = self.parse_task_parts(todo_text)
+        self.clean_text = re.sub(r'\s{2,}', ' ', self.cleaned_text).strip()
 
-        cleaned_text = todo_text
-        for part in self.task_parts:
-            if isinstance(part, TaskItem):
-                cleaned_text = part.clean(cleaned_text)
-        self.clean_text = re.sub(r'\s{2,}', ' ', cleaned_text).strip()
+    def parse_task_parts(self, todo_text):
+        parts = []
+
+        for part in self.TASK_PARTS:
+            if isclass(part) and issubclass(part, TaskItem):
+                part = part(todo_text, self)
+                todo_text = part.clean(todo_text)
+                parts.append(part)
+
+        return parts, todo_text
 
     @property
     def data(self):
