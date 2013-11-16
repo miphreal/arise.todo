@@ -1,6 +1,7 @@
 from inspect import isclass
 import operator
 import re
+from funcy import any_fn
 
 FILE = 'todo.txt'
 
@@ -23,7 +24,7 @@ class TaskItem(object):
 
     def __init__(self, src_text, task):
         self.task = task
-        self.item = self._parse(src_text)
+        self.data = self._parse(src_text)
 
     def _parse(self, src_text):
         if self.pattern:
@@ -35,13 +36,17 @@ class TaskItem(object):
         return item
 
     def format(self):
-        if self.item:
-            return self._format(self.item)
+        if self.data:
+            return self._format(self.data)
         return self.EMPTY
 
     def clean(self, src_text):
         """Removes itself from src_text"""
         return src_text.replace(self.format(), '')
+
+    @property
+    def name(self):
+        return re.sub(r'([A-Z])', '_\1', self.__class__.__name__.replace('Item', ''))
 
     __str__ = __unicode__ = format
 
@@ -62,8 +67,8 @@ class MultipleTaskItem(TaskItem):
 class PriorityItem(TaskItem):
     pattern = re.compile(r'\(([A-Z]\d*)\)')
 
-    def _format(self, item):
-        return '({})'.format(self.item)
+    def _format(self, data):
+        return '({})'.format(data)
 
 
 class CreationDateItem(TaskItem):
@@ -73,24 +78,24 @@ class CreationDateItem(TaskItem):
 class SchedulingItem(TaskItem):
     pattern = re.compile(r'#({})'.format(DATE_TIME_RE))
 
-    def _format(self, item):
-        return '#{}'.format(item)
+    def _format(self, data):
+        return '#{}'.format(data)
 
 
 class FadingDateItem(TaskItem):
     pattern = re.compile(r'#~({})'.format(DATE_TIME_RE))
 
-    def _format(self, item):
-        return '#~{}'.format(item)
+    def _format(self, data):
+        return '#~{}'.format(data)
 
 
 class TaskMsgItem(TaskItem):
     @property
-    def item(self):
+    def data(self):
         return self.task.clean_text
 
-    @item.setter
-    def item(self, value):
+    @data.setter
+    def data(self, value):
         pass
 
 
@@ -110,6 +115,12 @@ class ContextsItem(MultipleTaskItem):
 
 class StateItem(TaskItem):
     pattern = re.compile(r'&([\w-]+(\({datetime}\))?)'.format(datetime=DATE_TIME_RE))
+    STATES = ('todo', 'in-progress', 'done', 'removed', 'skipped')
+    UNKNOWN_STATE = 'unknown'
+
+    def _parse(self, src_text):
+        value = super(StateItem, self)._parse(src_text)
+        return value if not value or any(map(value.lower().startswith, self.STATES)) else self.UNKNOWN_STATE
 
     def _format(self, item):
         return '&{}'.format(item)
@@ -132,8 +143,7 @@ class Task(object):
     + state &done(2013-09-10 22:10)
     + creation date
     + task msg
-    - metadata key:value pairs in the task msg
-    - mentioned people <miph>
+    + metadata key:value pairs in the task msg
     """
     TASK_PARTS = [
         CreationDateItem,
@@ -146,8 +156,6 @@ class Task(object):
         SchedulingItem,
         MetadataItem,
     ]
-
-    STATES = ('todo', 'in-progress', 'done', 'removed')
 
     def __init__(self, todo_text):
         self.src_text = todo_text
@@ -165,31 +173,9 @@ class Task(object):
                 cleaned_text = part.clean(cleaned_text)
         self.clean_text = re.sub(r'\s{2,}', ' ', cleaned_text).strip()
 
+    @property
+    def data(self):
+        return {p.name: p.data for p in self.task_parts}
+
     def __str__(self):
         return ' '.join(filter(operator.truth, map(operator.methodcaller('format'), self.task_parts)))
-
-
-if __name__ == '__main__':
-    print Task('(A) task')
-    print Task('task (A)')
-    print Task('task (A12)   ksat')
-    print Task('(A) task +prj')
-    print Task('(A) task +prj-prj')
-    print Task('(A) task +prj/prj +jrp')
-    print Task(' +prj (A) task')
-    print Task('(A) +prj-prj task ')
-    print Task('+prj/prj (A) task  +jrp')
-    print Task('(A) task +prj @ctx')
-    print Task('(A) task +prj-prj @ctx-ctx')
-    print Task('(A) task +prj/prj +jrp @ctx/ctx @xtc')
-    print Task(' +prj @ctx (A) task')
-    print Task('(A) +prj-prj @ctx-ctx task ')
-    print Task('+prj/prj @ctx/ctx (A) task  +jrp @xtc')
-    print Task('(A) task &todo')
-    print Task('(A) task &in-progress')
-    print Task('(A) task &done(2013-11-10 22:33)')
-    print Task('(A) task #2013-11-10 22:33 task')
-    print Task('(A) task #~2013-11-10 22:33 task')
-    print Task('(A) task #2013-11-10 22:33 #~2013-11-10 23:33 task')
-    print Task('(A) task key:value key1:"value value"')
-    print Task('(A) task key:value key1:"value value" task-continue asdf..')
