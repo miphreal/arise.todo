@@ -1,7 +1,8 @@
+from logging import info
 from unittest import TestCase
 
 from hamcrest import *
-from arise_todo.todo_engine.parser import Task
+from arise_todo.core.parser import Task
 
 
 class TaskTest(TestCase):
@@ -26,9 +27,6 @@ class TaskTest(TestCase):
         ('(A) task &in-progress', '(A) &in-progress task'),
         ('(A) task &done(2013-11-10 22:33)', '(A) &done(2013-11-10 22:33) task'),
         ('(A) task #2013-11-10 22:33 task', '(A) task task #2013-11-10 22:33'),
-        ('(A) task #~2013-11-10 22:33 task', '(A) task task #~2013-11-10 22:33'),
-        ('(A) task #2013-11-10 22:33 #~2013-11-10 23:33 task',
-         '(A) task task #~2013-11-10 23:33 #2013-11-10 22:33'),
         ('(A) task key:value key1:"value value"', '(A) task key:value key1:"value value"'),
         ('(A) task key:value key1:"value value" task-continue asdf..',
          '(A) task task-continue asdf.. key:value key1:"value value"'),
@@ -37,6 +35,7 @@ class TaskTest(TestCase):
     def test_init(self):
         for task, expected in self.TEST_DATA:
             assert_that(unicode(Task(task)), equal_to(expected))
+            info('{:<40} result=> {}'.format(task, Task(task)))
 
     def test_consistent(self):
         for task, expected in self.TEST_DATA:
@@ -44,5 +43,4 @@ class TaskTest(TestCase):
 
     def test_data(self):
         for task, expected in self.TEST_DATA:
-            #print task, Task(task).data
-            pass
+            print '{:<40} result=> {}'.format(task, Task(task).data)

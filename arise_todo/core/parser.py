@@ -1,9 +1,7 @@
-from collections import OrderedDict
 from inspect import isclass
 import operator
 import re
 
-FILE = 'todo.txt'
 
 DATE_YYYY = r'(\d{4})'
 DATE_MM = r'(10|11|12|(0?\d))'
@@ -46,7 +44,7 @@ class TaskItem(object):
 
     @property
     def name(self):
-        return re.sub(r'([A-Z])', '\\1', self.__class__.__name__.replace('Item', ''))
+        return re.sub(r'^_', '', re.sub(r'([A-Z])', '_\\1', self.__class__.__name__.replace('Item', '')).lower())
 
     __str__ = __unicode__ = format
 
@@ -149,40 +147,33 @@ class MetadataItem(MultipleTaskItem):
         return [match[0] for match in self.pattern.findall(src_text)]
 
 
+TASK_PARTS = (
+    CreationDateItem,
+    PriorityItem,
+    StateItem,
+    TaskMsgItem,
+    ProjectsItem,
+    ContextsItem,
+    SchedulingItem,
+    MetadataItem,
+)
+
+
 class Task(object):
     """
-    Handling data
-    + priority (A)
-    + projects +prj +prj1
-    + contexts @ctx @ctx1
-    + scheduling #2013-09-25
-    + state &done(2013-09-10 22:10)
-    + creation date
-    + task msg
-    + metadata key:value pairs in the task msg
+    Task Parser
     """
-    TASK_PARTS = [
-        CreationDateItem,
-        PriorityItem,
-        StateItem,
-        TaskMsgItem,
-        ProjectsItem,
-        ContextsItem,
-        FadingDateItem,
-        SchedulingItem,
-        MetadataItem,
-    ]
 
-    def __init__(self, todo_text):
+    def __init__(self, todo_text, task_parts=TASK_PARTS):
         self.src_text = todo_text
         self.clean_text = ''
-        self.task_parts, self.cleaned_text = self.parse_task_parts(todo_text)
+        self.task_parts, self.cleaned_text = self.parse_task_parts(todo_text, task_parts)
         self.clean_text = re.sub(r'\s{2,}', ' ', self.cleaned_text).strip()
 
-    def parse_task_parts(self, todo_text):
+    def parse_task_parts(self, todo_text, task_parts):
         parts = []
 
-        for part in self.TASK_PARTS:
+        for part in task_parts:
             if isclass(part) and issubclass(part, TaskItem):
                 part = part(todo_text, self)
                 todo_text = part.clean(todo_text)
