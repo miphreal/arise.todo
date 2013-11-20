@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from inspect import isclass
 import operator
 import re
@@ -166,17 +167,23 @@ class Task(object):
     """
 
     def __init__(self, todo_text, task_id=None, task_parts=TASK_PARTS):
-        self.src_text = todo_text
+        self.src_text = todo_text.strip().decode('utf-8')
         self.clean_text = ''
-        self.task_parts, self.cleaned_text = self.parse_task_parts(todo_text, task_parts)
+        self.task_parts, self.cleaned_text = self.parse_task_parts(self.src_text, task_parts)
         self.clean_text = re.sub(r'\s{2,}', ' ', self.cleaned_text).strip()
-        self.id = task_id
-        if task_id is None:
-            self.id = self._task_id()
+        self.id = self._task_id(task_id)
 
-    def _task_id(self):
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __ne__(self, other):
+        return self.id != other.id
+
+    def _task_id(self, task_uuid=None):
         from hashlib import sha1
-        return uuid.uuid5(namespace=uuid.NAMESPACE_OID, name=sha1(unicode(self)).digest())
+        if task_uuid is None:
+            return uuid.uuid5(namespace=uuid.NAMESPACE_OID, name=sha1(unicode(self).encode('utf-8')).digest())
+        return uuid.UUID(hex=task_uuid, version=5)
 
     def parse_task_parts(self, todo_text, task_parts):
         parts = []
@@ -196,4 +203,4 @@ class Task(object):
         return d
 
     def __str__(self):
-        return u' '.join(filter(operator.truth, map(operator.methodcaller('format'), self.task_parts)))
+        return ' '.join(filter(operator.truth, map(operator.methodcaller('format'), self.task_parts)))
